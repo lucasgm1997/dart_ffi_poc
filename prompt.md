@@ -1,106 +1,89 @@
-Prompt — Estudo de FFI em Flutter com C e C++ (binding fácil e difícil)
 
-Objetivo geral
+# Prompt — Estudo prático de FFI em Flutter (C e C++)
 
-Quero estudar, na prática, como integrar bibliotecas nativas C e C++ em um app Flutter usando FFI.
-Quero que você crie exemplos completos cobrindo:
+## Objetivo geral
 
-Um caso de binding fácil (API em C “amigável” ao FFI)
+Estudar, na prática, como integrar bibliotecas nativas C e C++ em um app Flutter usando FFI. Gerar exemplos completos cobrindo:
 
-Um caso de binding não tão fácil (API em C++ com classes, etc., que precisa de wrapper C)
+- Um caso de *binding fácil* (API em C “FFI-friendly").
+- Um caso de *binding não tão fácil* (biblioteca C++ com classes/STL exposta via wrapper C).
 
-O foco é Flutter (mobile): Android e iOS.
+Foco: Flutter mobile (Android e iOS).
 
-Metas de aprendizado
+## Metas de aprendizado
 
-Entender quando uma lib C/C++ é:
+- Identificar quando uma biblioteca é "fácil" ou "difícil" para FFI.
+- Usar `dart:ffi` em um projeto Flutter real.
+- Entender o fluxo completo: código nativo → compilação (Android/iOS) → carregamento em Flutter → uso em widgets.
 
-“fácil de bindar” (API C, tipos simples)
+---
 
-“difícil” (C++ OO, templates, STL, etc.)
+## PARTE 1 — Binding fácil (API em C "FFI-friendly")
 
-Usar dart:ffi dentro de um projeto Flutter.
+Objetivo: criar uma lib C que use apenas tipos primitivos e POD structs, e integrá-la ao Flutter via FFI.
 
-Ver o fluxo completo:
+### 1.1 API em C (exemplo)
 
-código nativo → compilação (Android/iOS) → carregamento em Flutter → uso em widgets.
+Arquivos esperados: `math_lib.h`, `math_lib.c`.
 
-PARTE 1 — Binding fácil (biblioteca em C “FFI-friendly”)
+Exemplo de header:
 
-Crie um exemplo completo de integração de uma biblioteca em C com Flutter usando FFI.
+```c
+// math_lib.h
+#ifndef MATH_LIB_H
+#define MATH_LIB_H
 
-1.1. API em C
-
-Implemente um arquivo .c e .h com funções simples:
+typedef struct { double x; double y; } Point;
 
 int add(int a, int b);
-
 double hypotenuse(double a, double b);
-
 int factorial(int n);
-
-Uma função usando struct simples, ex.:
-
-```
-typedef struct {
-  double x;
-  double y;
-} Point;
-
 Point add_points(Point a, Point b);
+
+#endif // MATH_LIB_H
 ```
 
-Requisitos da API C:
+Requisitos:
 
-Usar apenas tipos primitivos (int, double) e struct simples (POD).
+- Usar apenas `int`, `double` e structs POD.
+- Expor uma interface limpa em `.h`.
 
-Interface clara em um .h público.
-
-1.2. Integração com Flutter (FFI)
+### 1.2 Integração com Flutter (FFI)
 
 No projeto Flutter:
 
-Criar uma pasta para os códigos nativos (ex.: native/ ou ios/Classes, android/src/main/cpp).
+- Colocar fontes nativos em `android/src/main/cpp` e/ou `ios/Classes` (ou `native/`).
+- Em Dart, abrir a biblioteca com `DynamicLibrary.open` (Android) ou `DynamicLibrary.process`/`DynamicLibrary.open` conforme plataforma.
+- Fazer `lookupFunction` para cada rotina C e declarar os tipos FFI (`Int32`, `Double`, `Struct`, `Pointer<T>`, etc.).
 
-Adicionar o binding FFI em Dart:
+Implementação recomendada:
 
-uso de DynamicLibrary.open / DynamicLibrary.process (conforme plataforma).
+- Criar uma classe Dart `NativeMath` que encapsula as funções nativas (conversões, memórias, etc.).
+- Tela Flutter de exemplo: campos de entrada, botões que chamam as funções nativas e exibem resultados.
 
-lookupFunction para mapear cada função C para Dart.
+### 1.3 Build nativo (resumo)
 
-definição dos tipos FFI (Int32, Double, Pointer<T>, Struct, etc.).
+- Android (NDK + CMake): criar `CMakeLists.txt` em `android/src/main/cpp`, compilar `.so` para arquiteturas alvo.
+- iOS: adicionar os arquivos `.c/.h` ao target do Xcode ou usar um Podspec para empacotar a lib.
+- Empacotamento: o artefato (`.so` / `.a` / `.dylib`) deve estar disponível no runtime do app; o Flutter carrega via `DynamicLibrary.open`.
 
-Implementar:
+Exemplo mínimo de `CMakeLists.txt`:
 
-Uma classe Dart “wrapper” em cima das funções nativas, ex.: NativeMath.
-
-Um exemplo de tela Flutter com:
-
-TextField para entrada de parâmetros.
-
-ElevatedButton chamando a função nativa.
-
-Exibição do resultado (ex.: soma, fatorial, hipotenusa, soma de pontos).
-
-1.3. Build nativo
-
-Documentar:
-
-Como compilar/ligar o código C para Android (NDK, CMakeLists.txt ou Android.mk).
-
-Como compilar/ligar o código C para iOS (Xcode, podspec/swift/objc se necessário).
-
-Mostrar como o .so/.a/.dylib é empacotado e acessado pelo Flutter.
-
-PARTE 2 — Binding não fácil (biblioteca C++ com wrapper C)
-
-Agora quero um exemplo de lib C++ que não é diretamente amigável ao FFI, e que precisa de um wrapper C.
-
-2.1. Classe C++ “complicadinha”
-
-Crie uma classe C++ com mais cara de C++ do que de C:
-
+```cmake
+cmake_minimum_required(VERSION 3.4.1)
+add_library(math_lib SHARED math_lib.c)
+target_include_directories(math_lib PRIVATE ${CMAKE_SOURCE_DIR})
 ```
+
+---
+
+## PARTE 2 — Binding não fácil (C++ com wrapper C)
+
+Objetivo: exemplificar uma biblioteca C++ que usa `std::string` e `std::vector`, e mostrar como criar um wrapper C para uso via FFI.
+
+### 2.1 Classe C++ (não FFI-friendly)
+
+```cpp
 // calculator.hpp
 #include <string>
 #include <vector>
@@ -112,26 +95,17 @@ public:
   double average(const std::vector<double>& values);
   std::string description() const;
 };
-
 ```
 
-Observações:
+Por que não expor direto ao FFI:
 
-Usar std::string e std::vector<double> para mostrar que isso não é FFI-friendly diretamente.
+- `std::string` e `std::vector` são tipos C++ cujo layout e semântica não são garantidos para ABI C estável. `dart:ffi` exige tipos C/ABI compatíveis.
 
-Explicar (nos comentários) por que não dá pra expor isso direto pro Dart FFI.
+### 2.2 Wrapper C (API C que esconde o C++)
 
-2.2. Criar wrapper em C
+Exponha apenas tipos simples e um ponteiro opaco:
 
-Criar um wrapper C com extern "C" que:
-
-Esconde toda a parte C++.
-
-Expõe apenas funções C com tipos simples.
-
-Exemplo:
-
-```
+```c
 // calculator_c_api.h
 #ifdef __cplusplus
 extern "C" {
@@ -144,128 +118,96 @@ void calculator_free(CalculatorHandle c);
 
 int calculator_sum(CalculatorHandle c, int a, int b);
 double calculator_average(CalculatorHandle c, const double* values, int length);
-const char* calculator_description(CalculatorHandle c);
+const char* calculator_description(CalculatorHandle c); // aloca C-string
 void calculator_free_string(const char* s);
 
 #ifdef __cplusplus
 }
 #endif
-
 ```
 
-Requisitos:
+Boas práticas e responsabilidades:
 
-Explicar a ideia de CalculatorHandle (ponteiro opaco).
+- `CalculatorHandle` é um ponteiro opaco (internamente `new Calculator(...)`): no Dart, tratado como `Pointer<Void>`.
+- `extern "C"` evita name mangling e garante ABI C.
+- Para strings retornadas, definir claramente: a função que retorna (`calculator_description`) aloca, e o chamador deve liberar (`calculator_free_string`).
 
-Explicar por que usamos extern "C" (evitar name mangling, ABI C, etc.).
+### 2.3 Binding em Flutter via FFI
 
-Cuidar de:
+No Dart:
 
-    quem aloca e quem libera strings retornadas (calculator_free_string).
+- Declarar `typedef`s e `lookupFunction` das funções do wrapper C.
+- Mapear `CalculatorHandle` para `Pointer<Void>`.
+- Implementar uma classe Dart `Calculator` que contém o handle e expõe métodos `sum`, `average`, `description` e `dispose`.
 
-    como converter std::string / std::vector internamente.
-
-2.3. Binding em Flutter via FFI
-
-    No Flutter:
-
-    Fazer bindings para essas funções C do wrapper:
-
-        calculator_new, calculator_free
-
-        calculator_sum
-
-        calculator_average
-
-        calculator_description / calculator_free_string
-
-    Criar uma classe Dart, por ex.:
+Esqueleto Dart:
 
 ```dart
 class Calculator {
-  // guarda Pointer<Void> do handle
-  // expõe métodos:
-  //  - sum(int a, int b)
-  //  - average(List<double> values)
-  //  - description()
-  // implementa dispose() para liberar o handle
-}
+  final Pointer<Void> _handle;
+  Calculator._(this._handle);
 
+  // factory para criar via calculator_new
+  // sum(int a, int b)
+  // average(List<double> values) -> converte para Pointer<Double>
+  // description() -> chama calculator_description e depois calculator_free_string
+  // dispose() -> chama calculator_free
+}
 ```
 
-Demonstrar uso em uma tela Flutter:
+### 2.4 Build nativo (C++)
 
-Campo para nome da calculadora.
+- Android: NDK + CMake. Certifique-se de ativar C++11/17: `set(CMAKE_CXX_STANDARD 17)` no `CMakeLists.txt`.
+- iOS: adicionar `.cpp`/`.mm` aos fontes do target no Xcode. Use `.mm` quando precisar de Objective-C++.
 
-Campos para valores.
+Exemplo mínimo (CMake) com C++:
 
-Botões que:
+```cmake
+add_library(calculator SHARED calculator.cpp calculator_c_api.cpp)
+set_target_properties(calculator PROPERTIES CXX_STANDARD 17)
+```
 
-Criam a instância nativa.
+---
 
-Chamam sum, average, description.
+## Comparação: binding fácil vs difícil
 
-Mostram resultados na UI.
+Binding fácil (Parte 1):
 
+- API C com tipos primitivos e structs POD é diretamente compatível com `dart:ffi`.
+- Vantagens: menos código de glue, menor risco de erros, desenvolvimento mais rápido.
+- Limitações: menos expressivo que C++ (sem RAII, STL, sobrecarga, etc.).
 
-2.4. Build nativo (C++)
+Binding difícil (Parte 2 — C++):
 
-Documentar também:
+- Problemas: `std::string`, `std::vector`, classes, templates, exceções, métodos virtuais e overloads complicam a exposição direta.
+- Solução: escrever um wrapper C que exponha tipos planos, ponteiros opacos e funções com ABI C (`extern "C"`).
+- Trade-offs: mais código de wrapper, responsabilidade explícita por alocação/liberação, mas permite expor a lógica C++ rica ao Dart.
 
-Como compilar C++ junto ao app Flutter:
+## Pontos essenciais para documentar em cada exemplo
 
-Android: NDK + CMake com suporte a C++ (set(CMAKE_CXX_STANDARD 17) etc.).
+- Quem aloca e quem libera memória (strings, buffers, handles).
+- Como os tipos são convertidos entre Dart e C/C++ (`List<double>` → `Pointer<Double>`, structs via `Struct` no Dart).
+- Trechos de configuração para build (ex.: `CMakeLists.txt`, instruções rápidas para Xcode/Podspec).
 
-iOS: adicionar arquivos .mm/.cpp ao target, ajustar flags de compilação C++.
+## Estilo de entrega esperado
 
-Diferenciar quando usar .cpp/.mm/.m
+- Código completo (C, C++, wrappers, Dart) em blocos.
+- Comentários didáticos explicando decisões (por que algo é FFI-friendly ou não).
+- Trechos de configuração relevantes e comandos de build de exemplo.
 
-Comparação explícita: binding fácil vs difícil
+---
 
-Peço que você inclua, ao final, uma seção explicando claramente:
+## Contexto do usuário
 
-Binding fácil (Parte 1)
+- Você é dev Flutter com bom domínio de Dart e conhecimento básico em C/C++.
+- Objetivo: estudo prático (não produção). Exemplos simples e reproduzíveis para copiar/rodar/estudar.
 
-Por que a API C é mais simples para FFI.
+---
 
-Vantagens: menos código de cola, menos risco de bug.
+Se quiser, eu posso agora:
 
-Limitações: menos “expressivo” que C++.
+1. Gerar os arquivos C/C++ e o wrapper (código completo).
+2. Gerar as bindings Dart e a UI de exemplo em Flutter.
+3. Incluir `CMakeLists.txt` e instruções passo a passo para Android/iOS.
 
-Binding difícil (Parte 2)
-
-Quais aspectos de C++ dificultam o FFI:
-
-std::string, std::vector, classes, métodos virtuais, templates, exceções.
-
-Como o wrapper C resolve:
-
-extern "C", tipos planos, ponteiro opaco.
-
-Trade-offs: mais código, mas API nativa mais rica.
-
-Estilo de resposta esperado do agente
-
-Mostrar código completo (C, C++, wrappers, Dart) em blocos.
-
-Comentar o código de forma didática.
-
-Incluir trechos de configuração relevantes (CMakeLists, Android.mk, Podspec/Xcode, se necessário).
-
-Sempre deixar claro:
-
-quem aloca e quem libera memória
-
-como os tipos são convertidos
-
-Explicar o mínimo necessário sobre build, mas com comandos exemplo ou trechos de config.
-
-Contexto do usuário
-
-    Sou dev Flutter e já programo bem em Dart.
-
-    Sei o básico de C/C++, mas nunca fiz FFI “de verdade”.
-
-    O objetivo é estudo prático, não produção.
-
-    Use exemplos simples, mas realistas, que eu consiga copiar, adaptar e rodar num projeto Flutter.
+Diga qual opção prefere que eu implemente primeiro.
