@@ -4,8 +4,6 @@
 import 'dart:ffi' as ffi;
 import 'dart:io' show Platform;
 
-import 'package:ffi/ffi.dart';
-
 // ============================================================================
 // FFI Type Definitions (matching C API in math_lib.h)
 // ============================================================================
@@ -61,19 +59,36 @@ typedef PointDistanceDart = double Function(Point, Point);
 // ============================================================================
 
 late ffi.DynamicLibrary _nativeLib;
+bool _initialized = false;
 
 ffi.DynamicLibrary _loadNativeLibrary() {
-  if (Platform.isAndroid) {
-    return ffi.DynamicLibrary.open('libmath_lib.so');
-  } else if (Platform.isIOS) {
-    return ffi.DynamicLibrary.process();
-  } else {
-    throw UnsupportedError('Unsupported platform');
+  try {
+    if (Platform.isAndroid) {
+      return ffi.DynamicLibrary.open('libmath_lib.so');
+    } else if (Platform.isIOS) {
+      return ffi.DynamicLibrary.process();
+    } else {
+      throw UnsupportedError(
+        'Unsupported platform: ${Platform.operatingSystem}',
+      );
+    }
+  } catch (e) {
+    throw Exception('Failed to load native library: $e');
   }
 }
 
 void _initializeLibrary() {
-  _nativeLib = _loadNativeLibrary();
+  if (_initialized) {
+    return; // Already initialized
+  }
+
+  try {
+    _nativeLib = _loadNativeLibrary();
+    _initialized = true;
+  } catch (e) {
+    _initialized = false;
+    rethrow;
+  }
 }
 
 // ============================================================================
@@ -92,21 +107,43 @@ class MathLib {
   static late ScalePointDart scalePoint;
   static late PointDistanceDart pointDistance;
 
-  static void initialize() {
-    _initializeLibrary();
+  /// Initialize the native library and load all functions
+  /// Call this once at app startup, before using any native functions
+  static Future<void> initialize() async {
+    if (_initialized) {
+      return; // Already initialized
+    }
 
-    add = _nativeLib.lookupFunction<AddC, AddDart>('add');
-    subtract = _nativeLib.lookupFunction<SubtractC, SubtractDart>('subtract');
-    multiply = _nativeLib.lookupFunction<MultiplyC, MultiplyDart>('multiply');
-    divide = _nativeLib.lookupFunction<DivideC, DivideDart>('divide');
-    hypotenuse =
-        _nativeLib.lookupFunction<HypotenuseC, HypotenuseDart>('hypotenuse');
-    circleArea =
-        _nativeLib.lookupFunction<CircleAreaC, CircleAreaDart>('circle_area');
-    factorial = _nativeLib.lookupFunction<FactorialC, FactorialDart>('factorial');
-    addPoints = _nativeLib.lookupFunction<AddPointsC, AddPointsDart>('add_points');
-    scalePoint = _nativeLib.lookupFunction<ScalePointC, ScalePointDart>('scale_point');
-    pointDistance =
-        _nativeLib.lookupFunction<PointDistanceC, PointDistanceDart>('point_distance');
+    try {
+      _initializeLibrary();
+
+      add = _nativeLib.lookupFunction<AddC, AddDart>('add');
+      subtract = _nativeLib.lookupFunction<SubtractC, SubtractDart>('subtract');
+      multiply = _nativeLib.lookupFunction<MultiplyC, MultiplyDart>('multiply');
+      divide = _nativeLib.lookupFunction<DivideC, DivideDart>('divide');
+      hypotenuse = _nativeLib.lookupFunction<HypotenuseC, HypotenuseDart>(
+        'hypotenuse',
+      );
+      circleArea = _nativeLib.lookupFunction<CircleAreaC, CircleAreaDart>(
+        'circle_area',
+      );
+      factorial = _nativeLib.lookupFunction<FactorialC, FactorialDart>(
+        'factorial',
+      );
+      addPoints = _nativeLib.lookupFunction<AddPointsC, AddPointsDart>(
+        'add_points',
+      );
+      scalePoint = _nativeLib.lookupFunction<ScalePointC, ScalePointDart>(
+        'scale_point',
+      );
+      pointDistance = _nativeLib
+          .lookupFunction<PointDistanceC, PointDistanceDart>('point_distance');
+    } catch (e) {
+      _initialized = false;
+      throw Exception('Failed to initialize MathLib: $e');
+    }
   }
+
+  /// Check if the library has been initialized
+  static bool get isInitialized => _initialized;
 }

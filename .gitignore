@@ -43,3 +43,6 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# iOS native symlinks - recreated by link_native_sources.sh
+ios/Runner/Native/

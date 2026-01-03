@@ -8,19 +8,21 @@ import 'package:ffi/ffi.dart' as ffi_lib;
 import '../bindings/calculator_bindings.dart';
 
 class Part2CppWrapperScreen extends StatefulWidget {
-  const Part2CppWrapperScreen({Key? key}) : super(key: key);
+  const Part2CppWrapperScreen({super.key});
 
   @override
   State<Part2CppWrapperScreen> createState() => _Part2CppWrapperScreenState();
 }
 
 class _Part2CppWrapperScreenState extends State<Part2CppWrapperScreen> {
-  final TextEditingController _nameController =
-      TextEditingController(text: 'MyCalc');
+  final TextEditingController _nameController = TextEditingController(
+    text: 'MyCalc',
+  );
   final TextEditingController _aController = TextEditingController(text: '10');
   final TextEditingController _bController = TextEditingController(text: '5');
-  final TextEditingController _valuesController =
-      TextEditingController(text: '1.5 2.3 3.1 4.8 5.2');
+  final TextEditingController _valuesController = TextEditingController(
+    text: '1.5 2.3 3.1 4.8 5.2',
+  );
 
   CalculatorHandle? _currentCalc;
   String _resultSum = '';
@@ -35,12 +37,18 @@ class _Part2CppWrapperScreenState extends State<Part2CppWrapperScreen> {
   @override
   void initState() {
     super.initState();
-    // Initialize native library
+    _initializeNativeLibrary();
+  }
+
+  Future<void> _initializeNativeLibrary() async {
     try {
-      CalculatorLib.initialize();
+      await CalculatorLib.initialize();
       _log('Calculator library initialized successfully');
     } catch (e) {
       _log('Error initializing library: $e');
+      setState(() {
+        _resultDescription = 'ERROR: Failed to initialize native library: $e';
+      });
     }
   }
 
@@ -142,7 +150,10 @@ class _Part2CppWrapperScreenState extends State<Part2CppWrapperScreen> {
     try {
       // Parse the values
       final valuesStr = _valuesController.text;
-      final valuesList = valuesStr.split(' ').map((v) => double.parse(v)).toList();
+      final valuesList = valuesStr
+          .split(' ')
+          .map((v) => double.parse(v))
+          .toList();
 
       // Allocate native double array
       final valuesPtr = ffi_lib.calloc<ffi.Double>(valuesList.length);
@@ -151,12 +162,21 @@ class _Part2CppWrapperScreenState extends State<Part2CppWrapperScreen> {
       }
 
       // Calculate statistics
-      final avg =
-          CalculatorLib.calculatorAverage(_currentCalc!, valuesPtr, valuesList.length);
-      final max =
-          CalculatorLib.calculatorMax(_currentCalc!, valuesPtr, valuesList.length);
-      final min =
-          CalculatorLib.calculatorMin(_currentCalc!, valuesPtr, valuesList.length);
+      final avg = CalculatorLib.calculatorAverage(
+        _currentCalc!,
+        valuesPtr,
+        valuesList.length,
+      );
+      final max = CalculatorLib.calculatorMax(
+        _currentCalc!,
+        valuesPtr,
+        valuesList.length,
+      );
+      final min = CalculatorLib.calculatorMin(
+        _currentCalc!,
+        valuesPtr,
+        valuesList.length,
+      );
 
       // Free the allocated memory
       ffi_lib.malloc.free(valuesPtr);
@@ -197,8 +217,7 @@ class _Part2CppWrapperScreenState extends State<Part2CppWrapperScreen> {
     }
 
     try {
-      final count =
-          CalculatorLib.calculatorGetOperationCount(_currentCalc!);
+      final count = CalculatorLib.calculatorGetOperationCount(_currentCalc!);
       setState(() {
         _resultOperationCount = 'Total operations: $count';
       });
@@ -248,8 +267,10 @@ class _Part2CppWrapperScreenState extends State<Part2CppWrapperScreen> {
           ),
           const SizedBox(height: 24),
           // Calculator creation
-          const Text('Create Calculator:',
-              style: TextStyle(fontWeight: FontWeight.bold)),
+          const Text(
+            'Create Calculator:',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 8),
           Row(
             children: [
@@ -285,8 +306,10 @@ class _Part2CppWrapperScreenState extends State<Part2CppWrapperScreen> {
             ),
           const SizedBox(height: 24),
           // Input parameters
-          const Text('Input Parameters:',
-              style: TextStyle(fontWeight: FontWeight.bold)),
+          const Text(
+            'Input Parameters:',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 8),
           Row(
             children: [
@@ -321,8 +344,10 @@ class _Part2CppWrapperScreenState extends State<Part2CppWrapperScreen> {
           ),
           const SizedBox(height: 24),
           // Arithmetic operations
-          const Text('Arithmetic Operations:',
-              style: TextStyle(fontWeight: FontWeight.bold)),
+          const Text(
+            'Arithmetic Operations:',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 8),
           Row(
             children: [
@@ -350,15 +375,35 @@ class _Part2CppWrapperScreenState extends State<Part2CppWrapperScreen> {
           ),
           const SizedBox(height: 8),
           if (_resultSum.isNotEmpty)
-            Text(_resultSum, style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+            Text(
+              _resultSum,
+              style: const TextStyle(
+                color: Colors.green,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           if (_resultProduct.isNotEmpty)
-            Text(_resultProduct, style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+            Text(
+              _resultProduct,
+              style: const TextStyle(
+                color: Colors.green,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           if (_resultDivide.isNotEmpty)
-            Text(_resultDivide, style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+            Text(
+              _resultDivide,
+              style: const TextStyle(
+                color: Colors.green,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           const SizedBox(height: 24),
           // Statistics
-          const Text('Statistics:',
-              style: TextStyle(fontWeight: FontWeight.bold)),
+          const Text(
+            'Statistics:',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 8),
           ElevatedButton(
             onPressed: _testStatistics,
@@ -366,11 +411,29 @@ class _Part2CppWrapperScreenState extends State<Part2CppWrapperScreen> {
           ),
           const SizedBox(height: 8),
           if (_resultAverage.isNotEmpty)
-            Text(_resultAverage, style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+            Text(
+              _resultAverage,
+              style: const TextStyle(
+                color: Colors.green,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           if (_resultMax.isNotEmpty)
-            Text(_resultMax, style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+            Text(
+              _resultMax,
+              style: const TextStyle(
+                color: Colors.green,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           if (_resultMin.isNotEmpty)
-            Text(_resultMin, style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+            Text(
+              _resultMin,
+              style: const TextStyle(
+                color: Colors.green,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           const SizedBox(height: 24),
           // Utility
           const Text('Utility:', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -381,7 +444,13 @@ class _Part2CppWrapperScreenState extends State<Part2CppWrapperScreen> {
           ),
           const SizedBox(height: 8),
           if (_resultOperationCount.isNotEmpty)
-            Text(_resultOperationCount, style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+            Text(
+              _resultOperationCount,
+              style: const TextStyle(
+                color: Colors.green,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
         ],
       ),
     );

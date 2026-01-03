@@ -3,7 +3,6 @@
 
 import 'dart:ffi' as ffi;
 import 'package:flutter/material.dart';
-import 'package:ffi/ffi.dart';
 
 import '../bindings/math_lib_bindings.dart';
 
@@ -17,8 +16,9 @@ class Part1EasyBindingScreen extends StatefulWidget {
 class _Part1EasyBindingScreenState extends State<Part1EasyBindingScreen> {
   final TextEditingController _aController = TextEditingController(text: '5');
   final TextEditingController _bController = TextEditingController(text: '3');
-  final TextEditingController _radiusController =
-      TextEditingController(text: '5.0');
+  final TextEditingController _radiusController = TextEditingController(
+    text: '5.0',
+  );
   final TextEditingController _nController = TextEditingController(text: '5');
 
   String _resultAdd = '';
@@ -33,12 +33,18 @@ class _Part1EasyBindingScreenState extends State<Part1EasyBindingScreen> {
   @override
   void initState() {
     super.initState();
-    // Initialize native library
+    _initializeNativeLibrary();
+  }
+
+  Future<void> _initializeNativeLibrary() async {
     try {
-      MathLib.initialize();
+      await MathLib.initialize();
       _log('Native library initialized successfully');
     } catch (e) {
       _log('Error initializing library: $e');
+      setState(() {
+        _resultAdd = 'ERROR: Failed to initialize native library: $e';
+      });
     }
   }
 
@@ -178,7 +184,8 @@ class _Part1EasyBindingScreenState extends State<Part1EasyBindingScreen> {
             'Distance: ${distance.toStringAsFixed(4)}';
       });
       _log(
-          'Points: A($pointA.x, $pointA.y), B($pointB.x, $pointB.y), Result($resultPoint.x, $resultPoint.y)');
+        'Points: A($pointA.x, $pointA.y), B($pointB.x, $pointB.y), Result($resultPoint.x, $resultPoint.y)',
+      );
     } catch (e) {
       setState(() {
         _resultPoint = 'Error: $e';
@@ -213,7 +220,10 @@ class _Part1EasyBindingScreenState extends State<Part1EasyBindingScreen> {
           ),
           const SizedBox(height: 24),
           // Input fields
-          const Text('Input Parameters:', style: TextStyle(fontWeight: FontWeight.bold)),
+          const Text(
+            'Input Parameters:',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 8),
           Row(
             children: [
@@ -256,8 +266,10 @@ class _Part1EasyBindingScreenState extends State<Part1EasyBindingScreen> {
           ),
           const SizedBox(height: 24),
           // Arithmetic operations
-          const Text('Arithmetic Operations:',
-              style: TextStyle(fontWeight: FontWeight.bold)),
+          const Text(
+            'Arithmetic Operations:',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 8),
           Row(
             children: [
@@ -292,17 +304,43 @@ class _Part1EasyBindingScreenState extends State<Part1EasyBindingScreen> {
           ),
           const SizedBox(height: 8),
           if (_resultAdd.isNotEmpty)
-            Text(_resultAdd, style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+            Text(
+              _resultAdd,
+              style: const TextStyle(
+                color: Colors.green,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           if (_resultSubtract.isNotEmpty)
-            Text(_resultSubtract, style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+            Text(
+              _resultSubtract,
+              style: const TextStyle(
+                color: Colors.green,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           if (_resultMultiply.isNotEmpty)
-            Text(_resultMultiply, style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+            Text(
+              _resultMultiply,
+              style: const TextStyle(
+                color: Colors.green,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           if (_resultDivide.isNotEmpty)
-            Text(_resultDivide, style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+            Text(
+              _resultDivide,
+              style: const TextStyle(
+                color: Colors.green,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           const SizedBox(height: 24),
           // Geometric operations
-          const Text('Geometric Operations:',
-              style: TextStyle(fontWeight: FontWeight.bold)),
+          const Text(
+            'Geometric Operations:',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 8),
           Row(
             children: [
@@ -323,13 +361,27 @@ class _Part1EasyBindingScreenState extends State<Part1EasyBindingScreen> {
           ),
           const SizedBox(height: 8),
           if (_resultHypotenuse.isNotEmpty)
-            Text(_resultHypotenuse, style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+            Text(
+              _resultHypotenuse,
+              style: const TextStyle(
+                color: Colors.green,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           if (_resultCircleArea.isNotEmpty)
-            Text(_resultCircleArea, style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+            Text(
+              _resultCircleArea,
+              style: const TextStyle(
+                color: Colors.green,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           const SizedBox(height: 24),
           // Other operations
-          const Text('Other Operations:',
-              style: TextStyle(fontWeight: FontWeight.bold)),
+          const Text(
+            'Other Operations:',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 8),
           Row(
             children: [
@@ -350,9 +402,21 @@ class _Part1EasyBindingScreenState extends State<Part1EasyBindingScreen> {
           ),
           const SizedBox(height: 8),
           if (_resultFactorial.isNotEmpty)
-            Text(_resultFactorial, style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+            Text(
+              _resultFactorial,
+              style: const TextStyle(
+                color: Colors.green,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           if (_resultPoint.isNotEmpty)
-            Text(_resultPoint, style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+            Text(
+              _resultPoint,
+              style: const TextStyle(
+                color: Colors.green,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
         ],
       ),
     );
